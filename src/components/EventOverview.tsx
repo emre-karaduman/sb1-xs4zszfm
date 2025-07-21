@@ -1,21 +1,35 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Database, Download, Upload } from 'lucide-react';
 import { Event } from '../types';
 import EventCard from './EventCard';
 import AddEventModal from './AddEventModal';
+import DatabaseManager from './DatabaseManager';
 
 interface EventOverviewProps {
   events: Event[];
+  currentDbPath: string;
   onEventSelect: (event: Event) => void;
   onAddEvent: (event: Omit<Event, 'id'>) => void;
+  onCreateNewDatabase: () => Promise<any>;
+  onOpenDatabase: () => Promise<any>;
+  onExportAll: () => Promise<any>;
+  onImport: () => Promise<any>;
+  onExportEvent: (eventId: string) => Promise<any>;
 }
 
 const EventOverview: React.FC<EventOverviewProps> = ({ 
   events, 
+  currentDbPath,
   onEventSelect, 
-  onAddEvent 
+  onAddEvent,
+  onCreateNewDatabase,
+  onOpenDatabase,
+  onExportAll,
+  onImport,
+  onExportEvent
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDbManager, setShowDbManager] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -27,14 +41,23 @@ const EventOverview: React.FC<EventOverviewProps> = ({
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Sort by status priority (active first, then upcoming, then completed)
       const statusPriority = { active: 0, upcoming: 1, completed: 2 };
       if (a.status !== b.status) {
         return statusPriority[a.status] - statusPriority[b.status];
       }
-      // Then sort by start date
       return a.startDate.getTime() - b.startDate.getTime();
     });
+
+  const handleExportEvent = async (eventId: string) => {
+    try {
+      const result = await onExportEvent(eventId);
+      if (result.success) {
+        alert('Event wurde erfolgreich exportiert!');
+      }
+    } catch (error) {
+      alert('Fehler beim Exportieren des Events');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -42,16 +65,36 @@ const EventOverview: React.FC<EventOverviewProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Event Management</h1>
-          <p className="text-gray-600 mt-1">Verwaltung von Veranstaltungen und technischen Patchdaten</p>
+          <p className="text-gray-600 mt-1">Desktop-Anwendung mit SQLite-Datenbank</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Neues Event
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowDbManager(!showDbManager)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Database className="w-4 h-4" />
+            Datenbank
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Neues Event
+          </button>
+        </div>
       </div>
+
+      {/* Database Manager */}
+      {showDbManager && (
+        <DatabaseManager
+          currentDbPath={currentDbPath}
+          onCreateNew={onCreateNewDatabase}
+          onOpen={onOpenDatabase}
+          onExportAll={onExportAll}
+          onImport={onImport}
+        />
+      )}
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -87,7 +130,7 @@ const EventOverview: React.FC<EventOverviewProps> = ({
           <p className="text-gray-500">
             {searchTerm || statusFilter !== 'all' 
               ? 'Versuchen Sie andere Suchkriterien' 
-              : 'Erstellen Sie Ihr erstes Event'}
+              : 'Erstellen Sie Ihr erstes Event oder importieren Sie vorhandene Daten'}
           </p>
         </div>
       ) : (
@@ -97,6 +140,7 @@ const EventOverview: React.FC<EventOverviewProps> = ({
               key={event.id}
               event={event}
               onClick={() => onEventSelect(event)}
+              onExport={() => handleExportEvent(event.id)}
             />
           ))}
         </div>

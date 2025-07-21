@@ -7,11 +7,6 @@ export interface Event {
   location: string;
   halls: string[];
   description?: string;
-  hallPlan?: {
-    filename: string;
-    uploadDate: Date;
-    url: string;
-  };
 }
 
 export interface PatchData {

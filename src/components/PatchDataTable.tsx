@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   ArrowLeft, 
-  Filter, 
   Search, 
   Edit3, 
   Copy, 
   Trash2,
-  Upload,
-  Download,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -20,27 +17,85 @@ import EditPatchDataModal from './EditPatchDataModal';
 
 interface PatchDataTableProps {
   event: Event;
-  patchData: PatchData[];
   onBack: () => void;
-  onAddPatchData: (patch: Omit<PatchData, 'id'>) => void;
-  onUpdatePatchData: (id: string, updates: Partial<PatchData>) => void;
-  onDeletePatchData: (id: string) => void;
-  onDuplicatePatchData: (id: string) => void;
+  onAddPatchData: (patch: Omit<PatchData, 'id'>) => Promise<PatchData>;
+  onUpdatePatchData: (id: string, updates: Partial<PatchData>) => Promise<void>;
+  onDeletePatchData: (id: string) => Promise<void>;
+  onDuplicatePatchData: (id: string) => Promise<PatchData>;
+  getPatchData: (eventId: string) => Promise<PatchData[]>;
 }
 
 const PatchDataTable: React.FC<PatchDataTableProps> = ({
   event,
-  patchData,
   onBack,
   onAddPatchData,
   onUpdatePatchData,
   onDeletePatchData,
-  onDuplicatePatchData
+  onDuplicatePatchData,
+  getPatchData
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPatch, setEditingPatch] = useState<PatchData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({});
+  const [patchData, setPatchData] = useState<PatchData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadPatchData = async () => {
+    setLoading(true);
+    try {
+      const data = await getPatchData(event.id);
+      setPatchData(data);
+    } catch (error) {
+      console.error('Error loading patch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPatchData();
+  }, [event.id]);
+
+  const handleAddPatchData = async (patch: Omit<PatchData, 'id'>) => {
+    try {
+      await onAddPatchData(patch);
+      await loadPatchData();
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error adding patch data:', error);
+    }
+  };
+
+  const handleUpdatePatchData = async (id: string, updates: Partial<PatchData>) => {
+    try {
+      await onUpdatePatchData(id, updates);
+      await loadPatchData();
+      setEditingPatch(null);
+    } catch (error) {
+      console.error('Error updating patch data:', error);
+    }
+  };
+
+  const handleDeletePatchData = async (id: string) => {
+    if (confirm('Sind Sie sicher, dass Sie diesen Stand löschen möchten?')) {
+      try {
+        await onDeletePatchData(id);
+        await loadPatchData();
+      } catch (error) {
+        console.error('Error deleting patch data:', error);
+      }
+    }
+  };
+
+  const handleDuplicatePatchData = async (id: string) => {
+    try {
+      await onDuplicatePatchData(id);
+      await loadPatchData();
+    } catch (error) {
+      console.error('Error duplicating patch data:', error);
+    }
+  };
 
   const getStatusIcon = (status: PatchData['status']) => {
     switch (status) {
@@ -99,17 +154,14 @@ const PatchDataTable: React.FC<PatchDataTableProps> = ({
   });
 
   const uniqueHalls = [...new Set(patchData.map(p => p.hall))].sort();
-  const uniqueCompanies = [...new Set(patchData.map(p => p.company))].sort();
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      // In a real application, you would upload this to a server
-      console.log('Uploading hall plan:', file.name);
-      // For demo purposes, we'll just log it
-      alert(`Hallenplan "${file.name}" wurde hochgeladen.`);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Lade Patchdaten...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -124,28 +176,16 @@ const PatchDataTable: React.FC<PatchDataTableProps> = ({
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
-            <p className="text-gray-600">Patchdaten-Verwaltung</p>
+            <p className="text-gray-600">Patchdaten-Verwaltung (SQLite)</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors">
-            <Upload className="w-4 h-4" />
-            Hallenplan
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Neuer Stand
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Neuer Stand
+        </button>
       </div>
 
       {/* Search and Filters */}
@@ -275,14 +315,14 @@ const PatchDataTable: React.FC<PatchDataTableProps> = ({
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDuplicatePatchData(patch.id)}
+                        onClick={() => handleDuplicatePatchData(patch.id)}
                         className="p-1 hover:bg-gray-100 rounded transition-colors"
                         title="Duplizieren"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDeletePatchData(patch.id)}
+                        onClick={() => handleDeletePatchData(patch.id)}
                         className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors"
                         title="Löschen"
                       >
@@ -339,7 +379,7 @@ const PatchDataTable: React.FC<PatchDataTableProps> = ({
         <AddPatchDataModal
           eventId={event.id}
           onClose={() => setShowAddModal(false)}
-          onAdd={onAddPatchData}
+          onAdd={handleAddPatchData}
         />
       )}
 
@@ -347,7 +387,7 @@ const PatchDataTable: React.FC<PatchDataTableProps> = ({
         <EditPatchDataModal
           patch={editingPatch}
           onClose={() => setEditingPatch(null)}
-          onUpdate={onUpdatePatchData}
+          onUpdate={handleUpdatePatchData}
         />
       )}
     </div>

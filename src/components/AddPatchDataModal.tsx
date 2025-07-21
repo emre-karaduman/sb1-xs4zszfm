@@ -5,7 +5,7 @@ import { PatchData } from '../types';
 interface AddPatchDataModalProps {
   eventId: string;
   onClose: () => void;
-  onAdd: (patch: Omit<PatchData, 'id'>) => void;
+  onAdd: (patch: Omit<PatchData, 'id'>) => Promise<void>;
 }
 
 const AddPatchDataModal: React.FC<AddPatchDataModalProps> = ({ 
@@ -26,17 +26,25 @@ const AddPatchDataModal: React.FC<AddPatchDataModalProps> = ({
     status: 'pending' as PatchData['status'],
     priority: 'normal' as PatchData['priority']
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    const newPatch: Omit<PatchData, 'id'> = {
-      ...formData,
-      eventId
-    };
+    try {
+      const newPatch: Omit<PatchData, 'id'> = {
+        ...formData,
+        eventId
+      };
 
-    onAdd(newPatch);
-    onClose();
+      await onAdd(newPatch);
+    } catch (error) {
+      console.error('Error adding patch data:', error);
+      alert('Fehler beim Hinzufügen des Stands');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isFormValid = formData.hall && formData.stand && formData.company;
@@ -218,10 +226,10 @@ const AddPatchDataModal: React.FC<AddPatchDataModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSubmitting}
               className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
-              Stand hinzufügen
+              {isSubmitting ? 'Wird hinzugefügt...' : 'Stand hinzufügen'}
             </button>
           </div>
         </form>

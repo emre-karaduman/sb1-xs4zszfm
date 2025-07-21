@@ -1,13 +1,14 @@
 import React from 'react';
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Download } from 'lucide-react';
 import { Event } from '../types';
 
 interface EventCardProps {
   event: Event;
   onClick: () => void;
+  onExport: () => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onClick }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, onClick, onExport }) => {
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
       case 'active':
@@ -52,12 +53,26 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClick }) => {
 
   const daysUntil = getDaysUntilEvent(event.startDate);
 
+  const handleExportClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExport();
+  };
+
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-orange-200 group"
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-orange-200 group relative"
     >
-      <div className="flex justify-between items-start mb-4">
+      {/* Export Button */}
+      <button
+        onClick={handleExportClick}
+        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+        title="Event exportieren"
+      >
+        <Download className="w-4 h-4" />
+      </button>
+
+      <div className="flex justify-between items-start mb-4 pr-8">
         <div className="flex-1">
           <h3 className="text-xl font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
             {event.name}

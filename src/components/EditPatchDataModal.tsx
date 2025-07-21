@@ -5,7 +5,7 @@ import { PatchData } from '../types';
 interface EditPatchDataModalProps {
   patch: PatchData;
   onClose: () => void;
-  onUpdate: (id: string, updates: Partial<PatchData>) => void;
+  onUpdate: (id: string, updates: Partial<PatchData>) => Promise<void>;
 }
 
 const EditPatchDataModal: React.FC<EditPatchDataModalProps> = ({ 
@@ -26,11 +26,20 @@ const EditPatchDataModal: React.FC<EditPatchDataModalProps> = ({
     status: patch.status,
     priority: patch.priority
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(patch.id, formData);
-    onClose();
+    setIsSubmitting(true);
+    
+    try {
+      await onUpdate(patch.id, formData);
+    } catch (error) {
+      console.error('Error updating patch data:', error);
+      alert('Fehler beim Aktualisieren des Stands');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isFormValid = formData.hall && formData.stand && formData.company;
@@ -203,10 +212,10 @@ const EditPatchDataModal: React.FC<EditPatchDataModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSubmitting}
               className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
-              Änderungen speichern
+              {isSubmitting ? 'Wird gespeichert...' : 'Änderungen speichern'}
             </button>
           </div>
         </form>
