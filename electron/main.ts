@@ -16,7 +16,7 @@ interface RawEventFromDB {
 }
 
 let mainWindow: BrowserWindow;
-let db: Database.Database;
+let db: Database;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -398,7 +398,7 @@ ipcMain.handle('export-all-events', async () => {
   
   if (!result.canceled && result.filePath) {
     const events = db.prepare('SELECT * FROM events').all();
-    const allData = events.map(event => {
+    const allData = events.map((event: RawEventFromDB) => {
       const patchData = db.prepare('SELECT * FROM patch_data WHERE eventId = ?').all(event.id);
       return {
         event: {
