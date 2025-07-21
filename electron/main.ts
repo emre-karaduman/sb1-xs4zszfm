@@ -3,6 +3,18 @@ import * as path from 'path';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 
+interface RawEventFromDB {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  location: string;
+  halls: string;
+  description: string;
+  createdAt: string;
+}
+
 let mainWindow: BrowserWindow;
 let db: Database.Database;
 
@@ -94,9 +106,9 @@ app.on('window-all-closed', () => {
 });
 
 // IPC Handlers
-ipcMain.handle('get-events', () => {
+ipcMain.handle('get-events', (_: Electron.IpcMainInvokeEvent) => {
   const stmt = db.prepare('SELECT * FROM events ORDER BY startDate');
-  const events = stmt.all().map(event => ({
+  const events = stmt.all().map((event: RawEventFromDB) => ({
     ...event,
     halls: JSON.parse(event.halls),
     startDate: new Date(event.startDate),
@@ -105,7 +117,7 @@ ipcMain.handle('get-events', () => {
   return events;
 });
 
-ipcMain.handle('add-event', (_, event) => {
+ipcMain.handle('add-event', (_: Electron.IpcMainInvokeEvent, event: any) => {
   const id = Date.now().toString();
   const stmt = db.prepare(`
     INSERT INTO events (id, name, startDate, endDate, status, location, halls, description)
@@ -126,7 +138,7 @@ ipcMain.handle('add-event', (_, event) => {
   return { ...event, id };
 });
 
-ipcMain.handle('update-event', (_, id, updates) => {
+ipcMain.handle('update-event', (_: Electron.IpcMainInvokeEvent, id: string, updates: any) => {
   const fields = [];
   const values = [];
   
@@ -151,18 +163,18 @@ ipcMain.handle('update-event', (_, id, updates) => {
   return true;
 });
 
-ipcMain.handle('delete-event', (_, id) => {
+ipcMain.handle('delete-event', (_: Electron.IpcMainInvokeEvent, id: string) => {
   const stmt = db.prepare('DELETE FROM events WHERE id = ?');
   stmt.run(id);
   return true;
 });
 
-ipcMain.handle('get-patch-data', (_, eventId) => {
+ipcMain.handle('get-patch-data', (_: Electron.IpcMainInvokeEvent, eventId: string) => {
   const stmt = db.prepare('SELECT * FROM patch_data WHERE eventId = ? ORDER BY hall, stand');
   return stmt.all(eventId);
 });
 
-ipcMain.handle('add-patch-data', (_, patch) => {
+ipcMain.handle('add-patch-data', (_: Electron.IpcMainInvokeEvent, patch: any) => {
   const id = Date.now().toString();
   const stmt = db.prepare(`
     INSERT INTO patch_data (id, eventId, hall, stand, company, product, dv, asw, port, cpeEqu, info, status, priority)
@@ -188,7 +200,7 @@ ipcMain.handle('add-patch-data', (_, patch) => {
   return { ...patch, id };
 });
 
-ipcMain.handle('update-patch-data', (_, id, updates) => {
+ipcMain.handle('update-patch-data', (_: Electron.IpcMainInvokeEvent, id: string, updates: any) => {
   const fields = [];
   const values = [];
   
@@ -205,13 +217,13 @@ ipcMain.handle('update-patch-data', (_, id, updates) => {
   return true;
 });
 
-ipcMain.handle('delete-patch-data', (_, id) => {
+ipcMain.handle('delete-patch-data', (_: Electron.IpcMainInvokeEvent, id: string) => {
   const stmt = db.prepare('DELETE FROM patch_data WHERE id = ?');
   stmt.run(id);
   return true;
 });
 
-ipcMain.handle('duplicate-patch-data', (_, id) => {
+ipcMain.handle('duplicate-patch-data', (_: Electron.IpcMainInvokeEvent, id: string) => {
   const original = db.prepare('SELECT * FROM patch_data WHERE id = ?').get(id);
   if (original) {
     const newId = Date.now().toString();
@@ -242,7 +254,7 @@ ipcMain.handle('duplicate-patch-data', (_, id) => {
 });
 
 // Database Management
-ipcMain.handle('create-new-database', async () => {
+ipcMain.handle('create-new-database', async (_: Electron.IpcMainInvokeEvent) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Neue Datenbank erstellen',
     defaultPath: 'events.db',
@@ -259,7 +271,7 @@ ipcMain.handle('create-new-database', async () => {
   return { success: false };
 });
 
-ipcMain.handle('open-database', async () => {
+ipcMain.handle('open-database', async (_: Electron.IpcMainInvokeEvent) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Datenbank öffnen',
     filters: [
@@ -276,12 +288,12 @@ ipcMain.handle('open-database', async () => {
   return { success: false };
 });
 
-ipcMain.handle('get-current-database-path', () => {
+ipcMain.handle('get-current-database-path', (_: Electron.IpcMainInvokeEvent) => {
   return db ? db.name : null;
 });
 
 // Export/Import
-ipcMain.handle('export-event', async (_, eventId) => {
+ipcMain.handle('export-event', async (_: Electron.IpcMainInvokeEvent, eventId: string) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Event exportieren',
     defaultPath: `event-${eventId}.json`,
@@ -311,7 +323,7 @@ ipcMain.handle('export-event', async (_, eventId) => {
   return { success: false };
 });
 
-ipcMain.handle('import-event', async () => {
+ipcMain.handle('import-event', async (_: Electron.IpcMainInvokeEvent) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Event importieren',
     filters: [
@@ -368,14 +380,17 @@ ipcMain.handle('import-event', async () => {
       
       return { success: true, eventId: newEventId };
     } catch (error) {
-      return { success: false, error: error.message };
+      if (error instanceof Error) {
+        return { success: false, error: error.message };
+      }
+      return { success: false, error: String(error) };
     }
   }
   
   return { success: false };
 });
 
-ipcMain.handle('export-all-events', async () => {
+ipcMain.handle('export-all-events', async (_: Electron.IpcMainInvokeEvent) => {
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Alle Events exportieren',
     defaultPath: `all-events-${new Date().toISOString().split('T')[0]}.json`,

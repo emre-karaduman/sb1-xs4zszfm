@@ -111,9 +111,9 @@ electron_1.app.on('window-all-closed', () => {
     }
 });
 // IPC Handlers
-electron_1.ipcMain.handle('get-events', () => {
+electron_1.ipcMain.handle('get-events', (_) => {
     const stmt = db.prepare('SELECT * FROM events ORDER BY startDate');
-    const events = stmt.all().map(event => ({
+    const events = stmt.all().map((event) => ({
         ...event,
         halls: JSON.parse(event.halls),
         startDate: new Date(event.startDate),
@@ -201,7 +201,7 @@ electron_1.ipcMain.handle('duplicate-patch-data', (_, id) => {
     return null;
 });
 // Database Management
-electron_1.ipcMain.handle('create-new-database', async () => {
+electron_1.ipcMain.handle('create-new-database', async (_) => {
     const result = await electron_1.dialog.showSaveDialog(mainWindow, {
         title: 'Neue Datenbank erstellen',
         defaultPath: 'events.db',
@@ -215,7 +215,7 @@ electron_1.ipcMain.handle('create-new-database', async () => {
     }
     return { success: false };
 });
-electron_1.ipcMain.handle('open-database', async () => {
+electron_1.ipcMain.handle('open-database', async (_) => {
     const result = await electron_1.dialog.showOpenDialog(mainWindow, {
         title: 'Datenbank öffnen',
         filters: [
@@ -229,7 +229,7 @@ electron_1.ipcMain.handle('open-database', async () => {
     }
     return { success: false };
 });
-electron_1.ipcMain.handle('get-current-database-path', () => {
+electron_1.ipcMain.handle('get-current-database-path', (_) => {
     return db ? db.name : null;
 });
 // Export/Import
@@ -258,7 +258,7 @@ electron_1.ipcMain.handle('export-event', async (_, eventId) => {
     }
     return { success: false };
 });
-electron_1.ipcMain.handle('import-event', async () => {
+electron_1.ipcMain.handle('import-event', async (_) => {
     const result = await electron_1.dialog.showOpenDialog(mainWindow, {
         title: 'Event importieren',
         filters: [
@@ -287,12 +287,15 @@ electron_1.ipcMain.handle('import-event', async () => {
             return { success: true, eventId: newEventId };
         }
         catch (error) {
-            return { success: false, error: error.message };
+            if (error instanceof Error) {
+                return { success: false, error: error.message };
+            }
+            return { success: false, error: String(error) };
         }
     }
     return { success: false };
 });
-electron_1.ipcMain.handle('export-all-events', async () => {
+electron_1.ipcMain.handle('export-all-events', async (_) => {
     const result = await electron_1.dialog.showSaveDialog(mainWindow, {
         title: 'Alle Events exportieren',
         defaultPath: `all-events-${new Date().toISOString().split('T')[0]}.json`,
