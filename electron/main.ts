@@ -138,9 +138,9 @@ ipcMain.handle('add-event', (_: Electron.IpcMainInvokeEvent, event: any) => {
   return { ...event, id };
 });
 
-ipcMain.handle('update-event', (_: Electron.IpcMainInvokeEvent, id: string, updates: any) => {
-  const fields = [];
-  const values = [];
+ipcMain.handle('update-event', (_: Electron.IpcMainInvokeEvent, id: string, updates: Partial<any>) => {
+  const fields: string[] = [];
+  const values: any[] = [];
   
   Object.entries(updates).forEach(([key, value]) => {
     if (key === 'halls') {
@@ -148,7 +148,7 @@ ipcMain.handle('update-event', (_: Electron.IpcMainInvokeEvent, id: string, upda
       values.push(JSON.stringify(value));
     } else if (key === 'startDate' || key === 'endDate') {
       fields.push(`${key} = ?`);
-      values.push(value.toISOString());
+      values.push((value as Date).toISOString());
     } else {
       fields.push(`${key} = ?`);
       values.push(value);
@@ -200,9 +200,9 @@ ipcMain.handle('add-patch-data', (_: Electron.IpcMainInvokeEvent, patch: any) =>
   return { ...patch, id };
 });
 
-ipcMain.handle('update-patch-data', (_: Electron.IpcMainInvokeEvent, id: string, updates: any) => {
-  const fields = [];
-  const values = [];
+ipcMain.handle('update-patch-data', (_: Electron.IpcMainInvokeEvent, id: string, updates: Partial<any>) => {
+  const fields: string[] = [];
+  const values: any[] = [];
   
   Object.entries(updates).forEach(([key, value]) => {
     fields.push(`${key} = ?`);
