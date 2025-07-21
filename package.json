@@ -13,10 +13,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\""
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "compile:electron": "tsc -p tsconfig.electron.json"
   },
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
+    "better-sqlite3": "^9.4.0",
     "electron": "^28.0.0",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
@@ -24,13 +25,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
-    "@types/better-sqlite3": "^7.4.9",
-    "@types/electron": "^28.1.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/electron": "^1.6.10",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
     "concurrently": "^9.2.0",
+    "electron-builder": "^24.9.1",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",

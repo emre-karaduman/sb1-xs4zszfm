@@ -15,10 +15,12 @@
     "outDir": "dist-electron",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "typeRoots": ["node_modules/@types", "src/types"]
   },
   "include": [
-    "electron/**/*"
+    "electron/**/*",
+    "src/types/**/*"
   ],
   "exclude": [
     "node_modules",
